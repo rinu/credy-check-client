@@ -1,9 +1,12 @@
 import http from 'http'
+import axios from 'axios'
 import jose from 'node-jose'
 
-const hostname = 'api.credycheck.staging.apps.cluster.credytest.tk'
+const axiosApi = axios.create({
+  baseURL: 'http://credy-check-api/v1/'
+})
 const callback = {
-  host: 'enternum.net',
+  host: 'rauno-precision-5530.lan',
   port: 3001
 }
 
@@ -11,75 +14,39 @@ let authToken
 
 const getAuthToken = () => {
   return new Promise((resolve, reject) => {
-    const authPostData = JSON.stringify({
+    axiosApi.post('token', {
       grant_type: 'client_credentials',
-      client_id: 'b9050b8d-d46c-4d72-a29e-3e29096d65fc',
-      client_secret: 'ecc55813-8d6c-4d80-a413-2f7011e62d14'
-    })
-
-    const authReq = http.request({
-      hostname,
-      path: '/v1/token',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(authPostData)
+      client_id: '82c8da9e-021d-46cd-abf0-d5e943a3ad38',
+      client_secret: '9c89cce9-a72d-459a-8e0e-b3b35f90cd31'
+    }).then(response => {
+      const message = response.data
+      if (message && message.access_token) {
+        authToken = message.access_token
+        console.log('got auth token')
+        resolve()
+      } else {
+        reject('invalid response')
       }
-    }, response => {
-      let fullResponse = ''
-      response.setEncoding('utf8')
-      response.on('data', chunk => {
-        fullResponse += chunk
-      })
-      response.on('end', () => {
-        try {
-          const message = JSON.parse(fullResponse)
-
-          if (message && message.access_token) {
-            authToken = message.access_token
-            console.log('got auth token')
-            resolve()
-          } else {
-            reject('invalid response')
-          }
-        } catch (e) {
-          reject(e)
-        }
-      })
-    })
-
-    authReq.on('error', e => {
+    }).catch(e => {
       reject(e)
     })
-
-    authReq.write(authPostData)
-    authReq.end()
   })
 }
 
 const startSession = () => {
-  const postData = JSON.stringify({
+  axiosApi.post('start-session', {
     callback_uri: `http://${callback.host}:${callback.port}/start-session-callback`
-  })
-
-  const req = http.request({
-    hostname,
-    path: '/v1/start-session',
-    method: 'POST',
+  }, {
     headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData),
       'Authorization': 'Bearer ' + authToken
     }
-  }, response => {
+  }).then(response => {
     console.log('session initiated')
-  })
-
-  req.write(postData);
-  req.end();
+  }).catch(() => {})
 }
 
 const server = http.createServer((req, res) => {
+  console.log(req.method, req.url)
   let ended = false
   const end = status => {
     if (ended) {
@@ -98,9 +65,12 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const session = JSON.parse(body)
-        console.log('session started, got keys')
-        getCustomerHistory(session)
+        console.log(session, 'session started, got keys')
+        if (session.keys && session.keys.length) {
+          getCustomerHistory(session)
+        }
       } catch (e) {
+        console.log(e)
         end(400)
       }
     })
@@ -122,9 +92,9 @@ const server = http.createServer((req, res) => {
     })
   }
 
-  end(200)
+  end(202)
 })
-server.listen(callback.port)
+server.listen(callback)
 
 const getCustomerHistory = session => {
   const envelopes = []
@@ -144,26 +114,16 @@ const getCustomerHistory = session => {
   }
 
   Promise.all(jwePromises).then(() => {
-    const postData = JSON.stringify({
+    axiosApi.post(`${session.uuid}/get-customer-history`, {
       callback_uri: `http://${callback.host}:${callback.port}/customer-history-callback`,
       envelopes
-    })
-
-    const req = http.request({
-      hostname,
-      path: `/v1/${session.uuid}/get-customer-history`,
-      method: 'POST',
+    }, {
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData),
         'Authorization': 'Bearer ' + authToken
       }
-    }, response => {
+    }).then(response => {
       console.log('request for customer history initiated')
-    })
-
-    req.write(postData);
-    req.end();
+    }).catch(() => {})
   })
 }
 
