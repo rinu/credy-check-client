@@ -5,6 +5,7 @@
   "license": "MIT",
   "description": "Credy check client",
   "author": "TC",
+  "main": "main.js",
   "dependencies": {
     "axios": "^0.19.2",
     "node-jose": "^1.1.4"
