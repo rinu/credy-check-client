@@ -7,7 +7,7 @@ const client = credyCheckClient({
   clientSecret: '9c89cce9-a72d-459a-8e0e-b3b35f90cd31'
 })
 const callback = {
-  host: 'rauno-precision-5530.lan',
+  host: 'your-host-name.tld',
   port: 3001
 }
 const personalId = '123456789'
