@@ -45,7 +45,7 @@ const server = http.createServer((req, res) => {
     })
   }
 
-  if (req.url.endsWith('customer/get') && req.method === 'POST') {
+  if (req.url === '/get-customer-data' && req.method === 'POST') {
     let body = ''
     req.on('data', data => {
       body += data
