@@ -23,7 +23,7 @@ const server = http.createServer((req, res) => {
     ended = true
   }
 
-  if (req.url === '/v1/key/create' && req.method === 'POST') {
+  if (req.url === '/get-session-key' && req.method === 'POST') {
     let body = ''
     req.on('data', data => {
       body += data
